@@ -1,0 +1,107 @@
+/* ==========================================================================
+   VOLT_ARCH | Precision Electronics & Electrical Components
+   Custom Stylesheet (Glassmorphism, Ambient Glow, Animations & Scrollbars)
+   ========================================================================== */
+
+/* Base Typography & Background Setup */
+body {
+    background-color: #08090D;
+    color: #E2E8F0;
+    overflow-x: hidden;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Ambient Glow Background & PCB Matrix Grid */
+.ambient-bg {
+    background-image: 
+        radial-gradient(circle at 15% 15%, rgba(0, 242, 255, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 65%, rgba(189, 0, 255, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 50% 90%, rgba(0, 230, 118, 0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+}
+
+.pcb-grid {
+    background-size: 40px 40px;
+    background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+/* Glassmorphic UI Cards */
+.glass-card {
+    background: rgba(18, 22, 32, 0.65);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+    border-color: rgba(0, 242, 255, 0.4);
+    transform: translateY(-5px);
+    box-shadow: 0 12px 40px 0 rgba(0, 242, 255, 0.15);
+}
+
+/* Sticky Glassmorphic Navigation Bar */
+.glass-nav {
+    background: rgba(8, 9, 13, 0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Neon Glow Effects */
+.glow-cyan {
+    box-shadow: 0 0 25px rgba(0, 242, 255, 0.35);
+}
+
+.glow-purple {
+    box-shadow: 0 0 25px rgba(189, 0, 255, 0.35);
+}
+
+.text-glow-cyan {
+    text-shadow: 0 0 12px rgba(0, 242, 255, 0.6);
+}
+
+/* Pulse Animation for Live Nodes & Badges */
+@keyframes pulseGlow {
+    0%, 100% { 
+        opacity: 0.3; 
+        transform: scale(1); 
+    }
+    50% { 
+        opacity: 0.9; 
+        transform: scale(1.08); 
+    }
+}
+
+.pulse-node {
+    animation: pulseGlow 3s infinite ease-in-out;
+}
+
+/* Custom Cyberpunk Dark Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #08090D;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #1E2330;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 242, 255, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #00F2FF;
+}
+
+/* Custom Tabs Active Indicator */
+.tab-btn.active {
+    color: #00F2FF;
+    border-bottom: 2px solid #00F2FF;
+    background: rgba(0, 242, 255, 0.08);
+}

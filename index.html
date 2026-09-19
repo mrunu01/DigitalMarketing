@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>VOLT_ARCH | Precision Electronics & Electrical Components</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts & Material Symbols -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=Lexend:wght@400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+    
+    <!-- Three.js & OrbitControls CDN for 3D CAD IGES Rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Modular Custom Stylesheet -->
+    <link rel="stylesheet" href="css/style.css"/>
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            cyan: "#00F2FF",
+                            cyanDark: "#00B8C4",
+                            purple: "#BD00FF",
+                            darkBg: "#08090D",
+                            cardBg: "rgba(18, 20, 29, 0.75)",
+                            glassBorder: "rgba(255, 255, 255, 0.12)",
+                            accentOrange: "#FF6B00",
+                            accentGreen: "#00E676",
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Lexend', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="ambient-bg pcb-grid min-h-screen text-slate-200">
+
+    <!-- TOP ANNOUNCEMENT BANNER -->
+    <div class="bg-gradient-to-r from-brand-purple/40 via-brand-cyan/20 to-brand-purple/40 border-b border-brand-cyan/20 py-2 px-4 text-xs font-mono text-center flex justify-center items-center gap-4">
+        <span class="flex items-center gap-1 text-brand-cyan font-semibold">
+            <span class="w-2 h-2 rounded-full bg-brand-cyan animate-ping"></span>
+            ACADEMIC SEMESTER SALE IS LIVE
+        </span>
+        <span class="hidden md:inline text-slate-300">| Flat 10% Extra Discount for Engineering & Polytechnic Students | Free Institutional Shipping on Orders > ₹5,000</span>
+        <button onclick="toggleStudentDiscount()" class="underline text-brand-cyan hover:text-white transition font-bold cursor-pointer">
+            [Toggle Student Discount]
+        </button>
+    </div>
+
+    <!-- MAIN NAVBAR -->
+    <header class="sticky top-0 z-40 glass-nav transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+            
+            <!-- Brand Logo -->
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-cyan to-brand-purple p-[1px] flex items-center justify-center glow-cyan group-hover:scale-105 transition-transform">
+                    <div class="w-full h-full bg-brand-darkBg rounded-[11px] flex items-center justify-center">
+                        <span class="material-symbols-outlined text-brand-cyan text-2xl">memory</span>
+                    </div>
+                </div>
+                <div class="flex flex-col">
+                    <span class="font-heading font-extrabold text-xl tracking-wider text-white flex items-center gap-1">
+                        VOLT<span class="text-brand-cyan">_ARCH</span>
+                    </span>
+                    <span class="text-[10px] font-mono text-slate-400 tracking-widest uppercase">Precision Hardware</span>
+                </div>
+            </a>
+
+            <!-- Search Bar with AI Autosuggest -->
+            <div class="relative flex-1 max-w-lg hidden md:block">
+                <div class="relative flex items-center">
+                    <span class="material-symbols-outlined absolute left-3.5 text-slate-400 text-xl pointer-events-none">search</span>
+                    <input type="text" id="searchInput" onkeyup="handleSearch(this.value)" placeholder="Search ESP32, Resistor 10k, Servo, Soldering Iron, DIY Kits..." 
+                        class="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl pl-11 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan transition"/>
+                    <button onclick="clearSearch()" class="absolute right-3 text-slate-500 hover:text-slate-300">
+                        <span class="material-symbols-outlined text-sm">cancel</span>
+                    </button>
+                </div>
+                <!-- Search Suggestions Dropdown -->
+                <div id="searchDropdown" class="hidden absolute left-0 right-0 top-full mt-2 glass-card rounded-xl p-3 z-50 shadow-2xl border border-brand-cyan/30">
+                    <div class="text-xs font-mono text-slate-400 mb-2 px-2 flex justify-between">
+                        <span>AI SEARCH RESULTS</span>
+                        <span class="text-brand-cyan">100% Matching Catalog</span>
+                    </div>
+                    <div id="searchResultsList" class="space-y-1"></div>
+                </div>
+            </div>
+
+            <!-- Navbar Actions -->
+            <div class="flex items-center gap-3">
+                
+                <!-- Student Status Indicator -->
+                <div id="studentBadge" class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
+                    <span class="material-symbols-outlined text-sm">school</span>
+                    <span>STUDENT DISQ (ACTIVE -10%)</span>
+                </div>
+
+                <!-- College Bulk PO Button -->
+                <button onclick="openBulkModal()" class="hidden lg:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800/80 border border-slate-700 hover:border-brand-purple text-xs font-medium text-slate-200 hover:text-white transition">
+                    <span class="material-symbols-outlined text-brand-purple text-base">domain</span>
+                    <span>Bulk / College Quotation</span>
+                </button>
+
+                <!-- Wishlist Button -->
+                <button onclick="toggleWishlistModal()" class="relative p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white transition">
+                    <span class="material-symbols-outlined text-xl">favorite</span>
+                    <span id="wishlistCount" class="absolute -top-1 -right-1 w-5 h-5 bg-brand-purple text-white text-[10px] font-bold rounded-full flex items-center justify-center">0</span>
+                </button>
+
+                <!-- Cart Button -->
+                <button onclick="toggleCartDrawer()" class="relative flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-cyanDark text-slate-950 font-bold text-sm glow-cyan hover:opacity-95 transition">
+                    <span class="material-symbols-outlined text-lg">shopping_cart</span>
+                    <span class="hidden sm:inline">Cart</span>
+                    <span id="cartCountBadge" class="w-5 h-5 bg-slate-950 text-brand-cyan text-xs font-bold rounded-full flex items-center justify-center">0</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sub-navigation links -->
+        <div class="border-t border-slate-800/60 bg-slate-950/40">
+            <div class="max-w-7xl mx-auto px-4 overflow-x-auto scrollbar-none flex items-center gap-6 text-xs font-medium text-slate-400 py-2.5">
+                <a href="#catalog" onclick="filterCategory('All')" class="hover:text-brand-cyan transition whitespace-nowrap flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">grid_view</span> All Components
+                </a>
+                <a href="#catalog" onclick="filterCategory('Microcontrollers')" class="hover:text-brand-cyan transition whitespace-nowrap">Microcontrollers & Dev Boards</a>
+                <a href="#catalog" onclick="filterCategory('Sensors')" class="hover:text-brand-cyan transition whitespace-nowrap">Sensors & Modules</a>
+                <a href="#catalog" onclick="filterCategory('Motors')" class="hover:text-brand-cyan transition whitespace-nowrap">Motors & Actuators</a>
+                <a href="#catalog" onclick="filterCategory('Kits')" class="hover:text-brand-cyan transition whitespace-nowrap text-brand-purple font-semibold">Engineering & College Kits</a>
+                <a href="#catalog" onclick="filterCategory('Tools')" class="hover:text-brand-cyan transition whitespace-nowrap">Soldering & Lab Equipment</a>
+                <a href="#catalog" onclick="filterCategory('Industrial')" class="hover:text-brand-cyan transition whitespace-nowrap">Heavy Industrial Engines</a>
+                <a href="#educational" class="hover:text-brand-cyan transition whitespace-nowrap text-emerald-400 font-semibold flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">menu_book</span> Interactive How-It-Works Hub
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION -->
+    <section class="relative min-h-[85vh] flex items-center justify-center overflow-hidden py-16 px-4">
+        <!-- Interactive Canvas Background -->
+        <canvas id="heroCanvas" class="absolute inset-0 w-full h-full pointer-events-none opacity-40 z-0"></canvas>
+
+        <div class="relative z-10 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            
+            <!-- Left Headline Text -->
+            <div class="lg:col-span-7 space-y-6 text-left">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-xs font-mono">
+                    <span class="w-2 h-2 rounded-full bg-brand-cyan animate-pulse"></span>
+                    NEXT-GEN ELECTRONICS & ELECTRICAL INFRASTRUCTURE
+                </div>
+
+                <h1 class="font-heading text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
+                    Powering Every <br/>
+                    <span class="bg-gradient-to-r from-brand-cyan via-purple-300 to-brand-purple bg-clip-text text-transparent text-glow-cyan">
+                        Innovation.
+                    </span>
+                </h1>
+
+                <p class="text-slate-300 text-base sm:text-lg max-w-2xl font-light leading-relaxed">
+                    The ultra-precision e-commerce hub for engineering students, polytechnic labs, robotics clubs, and industrial factories. From basic resistors and microcontrollers to heavy industrial engines and university practical kits.
+                </p>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-wrap gap-4 pt-4">
+                    <a href="#catalog" class="px-7 py-3.5 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-cyanDark text-slate-950 font-bold text-sm glow-cyan hover:scale-[1.02] transition flex items-center gap-2">
+                        <span>Shop Catalog</span>
+                        <span class="material-symbols-outlined text-lg">arrow_forward</span>
+                    </a>
+
+                    <a href="#catalog" onclick="filterCategory('Kits')" class="px-7 py-3.5 rounded-xl glass-card text-white font-semibold text-sm hover:bg-slate-800/80 hover:border-brand-purple transition flex items-center gap-2">
+                        <span class="material-symbols-outlined text-brand-purple">auto_awesome</span>
+                        <span>Explore College Kits</span>
+                    </a>
+
+                    <button onclick="openBulkModal()" class="px-6 py-3.5 rounded-xl bg-slate-900/90 border border-slate-700/80 hover:border-emerald-400 text-slate-200 hover:text-emerald-400 font-semibold text-sm transition flex items-center gap-2">
+                        <span class="material-symbols-outlined text-emerald-400">request_quote</span>
+                        <span>For Colleges / Bulk PO</span>
+                    </button>
+                </div>
+
+                <!-- Trust Badges -->
+                <div class="pt-6 border-t border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-mono text-slate-400">
+                    <div>
+                        <div class="text-white font-bold text-base">100,000+</div>
+                        <div>Students & Makers</div>
+                    </div>
+                    <div>
+                        <div class="text-brand-cyan font-bold text-base">500+</div>
+                        <div>Colleges & Universities</div>
+                    </div>
+                    <div>
+                        <div class="text-brand-purple font-bold text-base">100%</div>
+                        <div>Authentic Datasheets</div>
+                    </div>
+                    <div>
+                        <div class="text-emerald-400 font-bold text-base">GST / PO</div>
+                        <div>Instant Quotations</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right 3D Interactive Component Canvas Card -->
+            <div class="lg:col-span-5 relative flex justify-center items-center">
+                <div class="w-full aspect-square max-w-[480px] glass-card rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between border border-brand-cyan/40 shadow-2xl">
+                    <div class="flex items-center justify-between z-10">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                            <span class="text-xs font-mono text-slate-200 font-bold">3D CAD MODEL: Electrical+PCB.IGS</span>
+                        </div>
+                        <span id="cadStatusBadge" class="text-[10px] font-mono px-2.5 py-1 rounded-full bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/40 font-semibold">
+                            SolidWorks IGES 3D
+                        </span>
+                    </div>
+
+                    <!-- 3D Three.js WebGL Container -->
+                    <div id="threeContainer" class="w-full h-72 my-auto rounded-2xl overflow-hidden relative cursor-grab active:cursor-grabbing border border-slate-800 bg-slate-950/90">
+                        <!-- Three.js Canvas injected here -->
+                        <div id="cadLoaderSpinner" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 z-20 text-xs font-mono text-brand-cyan gap-2">
+                            <span class="material-symbols-outlined text-2xl animate-spin">sync</span>
+                            <span>Rendering Electrical+PCB.IGS CAD Model...</span>
+                        </div>
+                    </div>
+
+                    <div class="z-10 bg-slate-950/90 backdrop-blur-md rounded-2xl p-3.5 border border-slate-800 flex items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleAutoRotate()" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-brand-cyan text-xs transition" title="Toggle Auto Rotate">
+                                <span class="material-symbols-outlined text-sm">360</span>
+                            </button>
+                            <button onclick="toggleWireframe()" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-brand-purple text-xs transition" title="Toggle Wireframe CAD Mesh">
+                                <span class="material-symbols-outlined text-sm">grid_on</span>
+                            </button>
+                            <button onclick="reset3dCamera()" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 text-xs transition" title="Reset View">
+                                <span class="material-symbols-outlined text-sm">restart_alt</span>
+                            </button>
+                        </div>
+                        <div class="text-[11px] font-mono text-slate-400 text-right">
+                            <span class="text-white font-bold">15.3 MB CAD</span> | SolidWorks IGES
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- MAIN PRODUCT CATALOG & FILTERS -->
+    <section id="catalog" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        
+        <!-- Section Header -->
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4 border-b border-slate-800 pb-6">
+            <div>
+                <span class="text-xs font-mono text-brand-cyan uppercase tracking-widest">Master Hardware Inventory</span>
+                <h2 class="font-heading text-3xl sm:text-4xl font-extrabold text-white mt-1">Explore Products & Components</h2>
+            </div>
+            
+            <!-- Quick View Toggle Options -->
+            <div class="flex items-center gap-3 text-xs font-mono">
+                <span class="text-slate-400">Sort by:</span>
+                <select id="sortSelect" onchange="applyFilters()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-brand-cyan">
+                    <option value="featured">Featured / Best Sellers</option>
+                    <option value="price-low">Price: Low to High</option>
+                    <option value="price-high">Price: High to Low</option>
+                    <option value="rating">Highest Rated</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Filter Chips & Categories Bar -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none mb-8">
+            <button onclick="filterCategory('All')" class="cat-chip active px-4 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition bg-brand-cyan text-slate-950 border-brand-cyan">
+                All Products (12)
+            </button>
+            <button onclick="filterCategory('Microcontrollers')" class="cat-chip px-4 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition bg-slate-900/80 border-slate-700 text-slate-300 hover:border-brand-cyan">
+                Microcontrollers & Boards
+            </button>
+            <button onclick="filterCategory('Sensors')" class="cat-chip px-4 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition bg-slate-900/80 border-slate-700 text-slate-300 hover:border-brand-cyan">
+                Sensors & Modules
+            </button>
+            <button onclick="filterCategory('Motors')" class="cat-chip px-4 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition bg-slate-900/80 border-slate-700 text-slate-300 hover:border-brand-cyan">
+                Motors & Actuators
+            </button>
+            <button onclick="filterCategory('Kits')" class="cat-chip px-4 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition bg-slate-900/80 border-slate-700 text-brand-purple hover:border-brand-purple">
+                ⚡ Student & College Kits
+            </button>
+            <button onclick="filterCategory('Tools')" class="cat-chip px-4 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition bg-slate-900/80 border-slate-700 text-slate-300 hover:border-brand-cyan">
+                Soldering & Testing Equipment
+            </button>
+            <button onclick="filterCategory('Industrial')" class="cat-chip px-4 py-2 rounded-xl border text-xs font-semibold whitespace-nowrap transition bg-slate-900/80 border-slate-700 text-slate-300 hover:border-brand-cyan">
+                Heavy Industrial Engines
+            </button>
+        </div>
+
+        <!-- Product Grid Container -->
+        <div id="productGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <!-- Product cards will be rendered dynamically by JS -->
+        </div>
+    </section>
+
+    <!-- INTERACTIVE EDUCATIONAL HUB / HOW COMPONENTS WORK -->
+    <section id="educational" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-slate-800">
+        <div class="text-center max-w-3xl mx-auto mb-12">
+            <span class="text-xs font-mono text-emerald-400 uppercase tracking-widest">Student Learning Center</span>
+            <h2 class="font-heading text-3xl sm:text-4xl font-extrabold text-white mt-1">Interactive Component Working Principles</h2>
+            <p class="text-slate-400 text-sm mt-3">
+                Understand how electronic components operate under real voltage loads before adding them to your circuit layout or college practical report.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Component Selector List -->
+            <div class="lg:col-span-4 space-y-3">
+                <button onclick="loadEduDemo('resistor')" class="edu-btn active w-full p-4 glass-card rounded-2xl text-left border-brand-cyan flex items-center justify-between group">
+                    <div>
+                        <div class="font-bold text-white group-hover:text-brand-cyan transition">Resistors & Current Limiting</div>
+                        <div class="text-xs text-slate-400">Ohm's Law: V = I × R</div>
+                    </div>
+                    <span class="material-symbols-outlined text-brand-cyan">electric_bolt</span>
+                </button>
+
+                <button onclick="loadEduDemo('servo')" class="edu-btn w-full p-4 glass-card rounded-2xl text-left hover:border-brand-cyan flex items-center justify-between group">
+                    <div>
+                        <div class="font-bold text-white group-hover:text-brand-cyan transition">Servo Motors (PWM Signals)</div>
+                        <div class="text-xs text-slate-400">Duty Cycle 50Hz (1ms-2ms pulse)</div>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 group-hover:text-brand-cyan">settings</span>
+                </button>
+
+                <button onclick="loadEduDemo('transistor')" class="edu-btn w-full p-4 glass-card rounded-2xl text-left hover:border-brand-cyan flex items-center justify-between group">
+                    <div>
+                        <div class="font-bold text-white group-hover:text-brand-cyan transition">NPN Transistor Switching</div>
+                        <div class="text-xs text-slate-400">Base Current Controlling Collector</div>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 group-hover:text-brand-cyan">toggle_on</span>
+                </button>
+
+                <button onclick="loadEduDemo('esp32')" class="edu-btn w-full p-4 glass-card rounded-2xl text-left hover:border-brand-cyan flex items-center justify-between group">
+                    <div>
+                        <div class="font-bold text-white group-hover:text-brand-cyan transition">ESP32 GPIO & ADC Pins</div>
+                        <div class="text-xs text-slate-400">3.3V Logic Level Warnings</div>
+                    </div>
+                    <span class="material-symbols-outlined text-slate-400 group-hover:text-brand-cyan">developer_board</span>
+                </button>
+            </div>
+
+            <!-- Right Interactive Canvas Simulation Viewer -->
+            <div class="lg:col-span-8 glass-card rounded-3xl p-6 border border-slate-700 relative overflow-hidden">
+                <div class="flex items-center justify-between mb-4 pb-4 border-b border-slate-800">
+                    <h3 id="eduTitle" class="font-heading font-bold text-lg text-white">Resistor Working Principle Animation</h3>
+                    <span class="text-xs font-mono text-emerald-400 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30">LIVE SIMULATION ACTIVE</span>
+                </div>
+
+                <!-- Simulation Canvas -->
+                <div class="relative w-full h-64 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-center overflow-hidden">
+                    <canvas id="eduCanvas" class="w-full h-full"></canvas>
+                </div>
+
+                <!-- Explanatory Details Box -->
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 space-y-2">
+                        <div class="font-bold text-brand-cyan flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">lightbulb</span> How It Works
+                        </div>
+                        <p id="eduHow" class="text-slate-300 leading-relaxed">
+                            Resistors restrict the flow of electric current through a conductor, converting extra electrical energy into safe thermal dissipation and protecting sensitive LED or microcontroller inputs.
+                        </p>
+                    </div>
+
+                    <div class="bg-red-500/10 p-4 rounded-xl border border-red-500/30 space-y-2">
+                        <div class="font-bold text-red-400 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">warning</span> Common Student Mistakes
+                        </div>
+                        <p id="eduMistake" class="text-slate-300 leading-relaxed">
+                            Connecting a 5V supply directly to a 2V LED without a current limiting resistor will instantly burn out the semiconductor diode junction!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- REVIEWS & VERIFIED USER TESTIMONIALS -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-slate-800">
+        <div class="text-center max-w-2xl mx-auto mb-12">
+            <span class="text-xs font-mono text-brand-purple uppercase tracking-widest">Verified Feedback</span>
+            <h2 class="font-heading text-3xl font-extrabold text-white mt-1">Trusted by Engineering Labs & Universities</h2>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Review 1 -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="flex items-center text-amber-400 gap-1 text-sm">
+                        ★★★★★
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        "Ordered 45x ESP32 boards & IoT kits for our 3rd year Embedded Systems batch. GST invoice was generated instantly and components passed all lab stress tests cleanly!"
+                    </p>
+                </div>
+                <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-brand-cyan/20 border border-brand-cyan/40 flex items-center justify-center font-bold text-brand-cyan text-xs">
+                        DR
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white">Dr. Rajesh Kumar</div>
+                        <div class="text-[10px] text-slate-400">Head of ECE Dept, IIT Delhi</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review 2 -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="flex items-center text-amber-400 gap-1 text-sm">
+                        ★★★★★
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        "The student discount saved our robotics hackathon team 15%. Plus, the interactive pinout diagrams in the product page saved us hours during PCB breadboarding."
+                    </p>
+                </div>
+                <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-brand-purple/20 border border-brand-purple/40 flex items-center justify-center font-bold text-brand-purple text-xs">
+                        AP
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white">Ananya Patel</div>
+                        <div class="text-[10px] text-slate-400">Robotics Club Lead, BITS Pilani</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review 3 -->
+            <div class="glass-card rounded-2xl p-6 flex flex-col justify-between">
+                <div class="space-y-4">
+                    <div class="flex items-center text-amber-400 gap-1 text-sm">
+                        ★★★★★
+                    </div>
+                    <p class="text-xs text-slate-300 leading-relaxed">
+                        "As a commercial industrial panel manufacturer, we procure BLDC engines and relays in bulk. High inventory reliability and immediate PO processing."
+                    </p>
+                </div>
+                <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-bold text-emerald-400 text-xs">
+                        VK
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white">Vikram Sharma</div>
+                        <div class="text-[10px] text-slate-400">Lead Automation Engg, Synergies Ltd</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-800 text-slate-400 text-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div class="space-y-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-brand-cyan/20 border border-brand-cyan flex items-center justify-center text-brand-cyan font-bold">
+                        V
+                    </div>
+                    <span class="font-heading font-extrabold text-white text-lg tracking-wider">VOLT_ARCH</span>
+                </div>
+                <p class="text-slate-400 leading-relaxed">
+                    Precision electrical & electronic hardware infrastructure for universities, makers, and industrial engineers worldwide.
+                </p>
+            </div>
+
+            <div>
+                <h4 class="text-white font-bold mb-3 font-heading uppercase tracking-wider text-[11px]">Popular Categories</h4>
+                <ul class="space-y-2">
+                    <li><a href="#catalog" onclick="filterCategory('Microcontrollers')" class="hover:text-brand-cyan transition">ESP32 & Arduino Boards</a></li>
+                    <li><a href="#catalog" onclick="filterCategory('Sensors')" class="hover:text-brand-cyan transition">Environmental & Motion Sensors</a></li>
+                    <li><a href="#catalog" onclick="filterCategory('Kits')" class="hover:text-brand-cyan transition">Engineering Practical Kits</a></li>
+                    <li><a href="#catalog" onclick="filterCategory('Industrial')" class="hover:text-brand-cyan transition">Heavy Motors & Automation</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-white font-bold mb-3 font-heading uppercase tracking-wider text-[11px]">Academic & Institutional</h4>
+                <ul class="space-y-2">
+                    <li><a href="#" onclick="openBulkModal()" class="hover:text-brand-cyan transition">Bulk PO / GST Quotations</a></li>
+                    <li><a href="#" onclick="toggleStudentDiscount()" class="hover:text-brand-cyan transition">Student Discount Program (-10%)</a></li>
+                    <li><a href="#" class="hover:text-brand-cyan transition">University Lab Partnerships</a></li>
+                    <li><a href="#" class="hover:text-brand-cyan transition">Component Datasheets Index</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4 class="text-white font-bold mb-3 font-heading uppercase tracking-wider text-[11px]">Contact & Logistics</h4>
+                <div class="space-y-2">
+                    <div>Email: support@voltarch.tech</div>
+                    <div>Phone: +91 (800) 555-VOLT</div>
+                    <div>GSTIN: 07AAAAA0000A1Z5</div>
+                    <div class="pt-2 text-emerald-400 font-mono">✓ 100% Inspected Components</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-slate-900 py-6 text-center text-slate-500 font-mono text-[11px]">
+            © 2026 VOLT_ARCH HARDWARE TECHNOLOGIES. ALL RIGHTS RESERVED. DESIGNED FOR HIGH-PERFORMANCE INNOVATION.
+        </div>
+    </footer>
+
+    <!-- PRODUCT DETAIL MODAL -->
+    <div id="productModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-card max-w-4xl w-full rounded-3xl p-6 border border-brand-cyan/40 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+            
+            <button onclick="closeProductModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition z-10">
+                <span class="material-symbols-outlined text-sm">close</span>
+            </button>
+
+            <div id="productModalContent"></div>
+        </div>
+    </div>
+
+    <!-- BULK QUOTATION / COLLEGE PO MODAL -->
+    <div id="bulkModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="glass-card max-w-lg w-full rounded-3xl p-6 border border-brand-purple/50 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-brand-purple">domain</span>
+                    <h3 class="font-heading font-bold text-lg text-white">College / Bulk PO Quotation Request</h3>
+                </div>
+                <button onclick="closeBulkModal()" class="text-slate-400 hover:text-white">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form onsubmit="handleBulkSubmit(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-slate-400 font-mono mb-1">INSTITUTION / COMPANY NAME *</label>
+                    <input type="text" required placeholder="e.g. IIT Delhi / Robotics Club" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-purple"/>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-slate-400 font-mono mb-1">CONTACT PERSON *</label>
+                        <input type="text" required placeholder="Prof. / Student Name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-purple"/>
+                    </div>
+                    <div>
+                        <label class="block text-slate-400 font-mono mb-1">GST NUMBER (OPTIONAL)</label>
+                        <input type="text" placeholder="22AAAAA0000A1Z5" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-purple"/>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-slate-400 font-mono mb-1">BILL OF MATERIALS (BOM) LIST OR REQUIRED KITS *</label>
+                    <textarea rows="3" required placeholder="e.g., 50x ESP32-S3, 100x Servo Motors SG90, 20x TS101 Soldering Irons" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-brand-purple"></textarea>
+                </div>
+
+                <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-brand-purple to-pink-600 text-white font-bold text-sm shadow-lg hover:opacity-95 transition">
+                    Submit Proforma Invoice Request
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- CART DRAWER -->
+    <div id="cartDrawer" class="hidden fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex justify-end">
+        <div class="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between shadow-2xl">
+            <div>
+                <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-brand-cyan">shopping_cart</span>
+                        <h3 class="font-heading font-bold text-lg text-white">Your Hardware Cart</h3>
+                    </div>
+                    <button onclick="toggleCartDrawer()" class="text-slate-400 hover:text-white">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div id="cartItemsList" class="space-y-3 overflow-y-auto max-h-[55vh] pr-1"></div>
+            </div>
+
+            <div class="border-t border-slate-800 pt-4 space-y-3">
+                <div class="flex justify-between text-xs text-slate-400">
+                    <span>Subtotal:</span>
+                    <span id="cartSubtotal" class="font-mono text-white">₹0.00</span>
+                </div>
+                <div id="studentDiscountRow" class="hidden flex justify-between text-xs text-emerald-400 font-mono">
+                    <span>Student Rebate (-10%):</span>
+                    <span id="cartStudentDiscount">-₹0.00</span>
+                </div>
+                <div class="flex justify-between text-xs text-slate-400">
+                    <span>Estimated GST (18% Included):</span>
+                    <span id="cartGst" class="font-mono text-slate-300">₹0.00</span>
+                </div>
+                <div class="flex justify-between text-base font-bold text-white border-t border-slate-800 pt-2">
+                    <span>Total Amount:</span>
+                    <span id="cartTotal" class="font-mono text-brand-cyan">₹0.00</span>
+                </div>
+
+                <button onclick="simulateCheckout()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-cyanDark text-slate-950 font-bold text-sm glow-cyan hover:scale-[1.01] transition flex items-center justify-center gap-2">
+                    <span>Proceed to Secure Checkout</span>
+                    <span class="material-symbols-outlined text-lg">arrow_forward</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modular Application Logic Script -->
+    <script src="js/app.js"></script>
+</body>
+</html>
