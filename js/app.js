@@ -215,14 +215,15 @@ let auth = null;
 let db = null;
 let isFirebaseLive = false;
 
-// Safe, zero-config Firebase connector (works seamlessly offline & with live cloud)
+// Live Firebase Connector for Volt-Arch
 const firebaseConfig = {
-    apiKey: "AIzaSyVoltArch2026HardwareTechAnalyticsKey",
-    authDomain: "volt-arch-analytics.firebaseapp.com",
-    projectId: "volt-arch-analytics",
-    storageBucket: "volt-arch-analytics.appspot.com",
-    messagingSenderId: "109823456789",
-    appId: "1:109823456789:web:98f7e6d5c4b3a2"
+    apiKey: "AIzaSyDwOGa63METf9SuZfHs6Tshh8_mEMRO_m4",
+    authDomain: "volt-arch.firebaseapp.com",
+    projectId: "volt-arch",
+    storageBucket: "volt-arch.firebasestorage.app",
+    messagingSenderId: "482759537088",
+    appId: "1:482759537088:web:f8ec5f917604ebc9081825",
+    measurementId: "G-TLRLE0NF6N"
 };
 
 try {
@@ -230,10 +231,15 @@ try {
         firebase.initializeApp(firebaseConfig);
         auth = firebase.auth();
         db = firebase.firestore();
+        if (firebase.analytics) {
+            firebase.analytics();
+        }
         isFirebaseLive = true;
+        console.log("⚡ VOLT_ARCH: Connected to live Firebase Auth & Firestore (volt-arch)");
     }
 } catch (e) {
-    // Graceful fallback to client-side cloud simulation
+    console.warn("Firebase initialization note:", e);
+    // Graceful fallback to client-side storage if offline
     isFirebaseLive = false;
 }
 
