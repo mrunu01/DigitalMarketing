@@ -664,15 +664,19 @@
     </div>
 
     <!-- USER AUTHENTICATION & LOGIN GATEKEEPER MODAL -->
-    <div id="authModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-xl flex items-center justify-center p-4">
-        <div class="glass-card max-w-md w-full rounded-3xl p-6 sm:p-8 border border-brand-cyan/40 shadow-2xl relative space-y-5">
+    <div id="authModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-2xl flex items-center justify-center p-4">
+        <div class="glass-card max-w-md w-full rounded-3xl p-6 sm:p-8 border border-brand-cyan/40 shadow-2xl relative space-y-5 animate-fade-in">
             
-            <!-- Close Button -->
-            <button onclick="closeAuthModal()" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
+            <!-- Close Button (hidden when mandatory login is required) -->
+            <button id="authCloseBtn" onclick="closeAuthModal()" class="hidden absolute top-5 right-5 w-8 h-8 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center text-slate-400 hover:text-white transition">
                 <span class="material-symbols-outlined text-sm">close</span>
             </button>
 
             <div class="text-center space-y-2">
+                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-cyan/10 border border-brand-cyan/30 text-brand-cyan text-[11px] font-mono mb-1">
+                    <span class="w-2 h-2 rounded-full bg-brand-cyan animate-pulse"></span>
+                    <span>MANDATORY ACCESS GATEWAY</span>
+                </div>
                 <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-cyan to-brand-purple p-[1px] mx-auto flex items-center justify-center glow-cyan">
                     <div class="w-full h-full bg-brand-darkBg rounded-[15px] flex items-center justify-center">
                         <span class="material-symbols-outlined text-brand-cyan text-2xl">verified_user</span>
@@ -680,7 +684,7 @@
                 </div>
                 <h3 class="font-heading font-extrabold text-2xl text-white">Student & Lab Access</h3>
                 <p class="text-xs text-slate-400 leading-relaxed max-w-xs mx-auto">
-                    Sign in to sync your cloud cart, save components across devices, and unlock the 10% student discount.
+                    Please log in with Google or your College Email to explore components, view 3D CAD models, and sync your cloud cart.
                 </p>
             </div>
 

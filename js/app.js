@@ -250,6 +250,11 @@ function initAuthSession() {
         }
     }
 
+    // MANDATORY GATE: If no user is logged in, immediately open and lock the gatekeeper modal!
+    if (!currentUser) {
+        setTimeout(() => openAuthModal(true), 250);
+    }
+
     // Attach real Firebase listener if live
     if (isFirebaseLive && auth) {
         auth.onAuthStateChanged(user => {
@@ -266,6 +271,7 @@ function initAuthSession() {
                 updateAuthUI();
                 syncVisitorToCloud(currentUser);
                 loadCartFromCloud(user.uid);
+                closeAuthModal(true);
             }
         });
     }
@@ -333,13 +339,26 @@ function loadCartFromCloud(uid) {
     }
 }
 
-// User Auth Modal Controls
-function openAuthModal() {
+// User Auth Modal Controls (Mandatory Access Gate)
+function openAuthModal(isMandatory = false) {
     const modal = document.getElementById('authModal');
+    const closeBtn = document.getElementById('authCloseBtn');
+
+    if (!currentUser || isMandatory) {
+        // Enforce gate: hide close button
+        if (closeBtn) closeBtn.classList.add('hidden');
+    } else {
+        if (closeBtn) closeBtn.classList.remove('hidden');
+    }
+
     if (modal) modal.classList.remove('hidden');
 }
 
-function closeAuthModal() {
+function closeAuthModal(force = false) {
+    if (!currentUser && !force) {
+        alert("🔒 Access Restricted: Please sign in with Google or your College Email to explore VOLT_ARCH!");
+        return;
+    }
     const modal = document.getElementById('authModal');
     if (modal) modal.classList.add('hidden');
 }
@@ -979,6 +998,12 @@ function switchModalTab(tabName) {
 // SHOPPING CART WITH CLOUD PERSISTENCE
 // ==========================================================================
 function addToCart(prodId) {
+    if (!currentUser) {
+        openAuthModal(true);
+        alert("🔒 Access Restricted: Please sign in with Google or your College Email first to explore & build your hardware cart!");
+        return;
+    }
+
     const existing = cart.find(item => item.id === prodId);
     if (existing) {
         existing.qty++;
