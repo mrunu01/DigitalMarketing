@@ -218,15 +218,54 @@ window.addEventListener('DOMContentLoaded', () => {
     initHeroCanvas();
     init3dCanvas();
     loadEduDemo('resistor');
+    initGlobalListeners();
 });
+
+// GLOBAL CLICK & SHORTCUT LISTENERS
+function initGlobalListeners() {
+    // Backdrop clicks for modal dialogs & dropdown dismissal
+    document.addEventListener('click', (e) => {
+        const searchInput = document.getElementById('searchInput');
+        const searchDropdown = document.getElementById('searchDropdown');
+        if (searchInput && searchDropdown && !searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+            searchDropdown.classList.add('hidden');
+        }
+
+        const productModal = document.getElementById('productModal');
+        if (productModal && e.target === productModal) {
+            closeProductModal();
+        }
+
+        const bulkModal = document.getElementById('bulkModal');
+        if (bulkModal && e.target === bulkModal) {
+            closeBulkModal();
+        }
+
+        const cartDrawer = document.getElementById('cartDrawer');
+        if (cartDrawer && e.target === cartDrawer) {
+            toggleCartDrawer(false);
+        }
+    });
+
+    // Escape key closes open overlay modals
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeProductModal();
+            closeBulkModal();
+            toggleCartDrawer(false);
+            const dropdown = document.getElementById('searchDropdown');
+            if (dropdown) dropdown.classList.add('hidden');
+        }
+    });
+}
 
 // THREE.JS CAD ENGINE FOR Electrical+PCB.IGS
 function init3dCanvas() {
     const container = document.getElementById('threeContainer');
     if (!container) return;
 
-    const width = container.clientWidth;
-    const height = container.clientHeight;
+    const width = container.clientWidth || 400;
+    const height = container.clientHeight || 288;
 
     // 1. Scene
     scene = new THREE.Scene();
@@ -304,12 +343,14 @@ function init3dCanvas() {
 
     // Resize listener
     window.addEventListener('resize', () => {
-        if (!container) return;
+        if (!container || !renderer || !camera) return;
         const w = container.clientWidth;
         const h = container.clientHeight;
-        camera.aspect = w / h;
-        camera.updateProjectionMatrix();
-        renderer.setSize(w, h);
+        if (w > 0 && h > 0) {
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+            renderer.setSize(w, h);
+        }
     });
 }
 
@@ -388,6 +429,8 @@ function build3dPcbModel() {
 function parseIgesData(text) {
     const lines = text.split('\n');
     const cadPoints = [];
+    const scale = 0.165;
+    const yOffset = 0.22;
 
     // IGES parameter section starts with 'P' lines
     for (let i = 0; i < lines.length; i++) {
@@ -395,35 +438,67 @@ function parseIgesData(text) {
         if (line.length >= 73 && line.substring(72, 73) === 'P') {
             const parts = line.substring(0, 64).split(',');
             if (parts[0].trim() === '110') { // Entity 110 = Straight Line
-                const x1 = parseFloat(parts[1]) * 0.05;
-                const y1 = parseFloat(parts[2]) * 0.05;
-                const z1 = parseFloat(parts[3]) * 0.05;
-                const x2 = parseFloat(parts[4]) * 0.05;
-                const y2 = parseFloat(parts[5]) * 0.05;
-                const z2 = parseFloat(parts[6]) * 0.05;
+                const rawX1 = parseFloat(parts[1]);
+                const rawY1 = parseFloat(parts[2]);
+                const rawZ1 = parseFloat(parts[3]);
+                const rawX2 = parseFloat(parts[4]);
+                const rawY2 = parseFloat(parts[5]);
+                const rawZ2 = parseFloat(parts[6]);
 
-                if (!isNaN(x1) && !isNaN(y1) && !isNaN(z1)) {
-                    cadPoints.push(new THREE.Vector3(x1, y1, z1));
-                    cadPoints.push(new THREE.Vector3(x2 || x1, y2 || y1, z2 || z1));
+                if (isNaN(rawX1) || isNaN(rawY1) || isNaN(rawZ1) || isNaN(rawX2) || isNaN(rawY2) || isNaN(rawZ2)) {
+                    continue;
                 }
+
+                const len = Math.hypot(rawX2 - rawX1, rawY2 - rawY1, rawZ2 - rawZ1);
+
+                // Filter out infinite revolution axes, datum construction lines & unbounded vectors
+                if (len > 35 || Math.abs(rawY1) > 15 || Math.abs(rawY2) > 15 || 
+                    Math.abs(rawX1) > 32 || Math.abs(rawX2) > 32 || 
+                    Math.abs(rawZ1) > 22 || Math.abs(rawZ2) > 22) {
+                    continue;
+                }
+
+                cadPoints.push(
+                    rawX1 * scale,
+                    rawY1 * scale + yOffset,
+                    rawZ1 * scale,
+                    rawX2 * scale,
+                    rawY2 * scale + yOffset,
+                    rawZ2 * scale
+                );
             }
         }
     }
 
     if (cadPoints.length > 0) {
-        const igesGeo = new THREE.BufferGeometry().setFromPoints(cadPoints);
-        const igesMat = new THREE.LineBasicMaterial({ color: 0xBD00FF, linewidth: 1.5 });
+        const igesGeo = new THREE.BufferGeometry();
+        igesGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(cadPoints), 3));
+        const igesMat = new THREE.LineBasicMaterial({ 
+            color: 0xBD00FF, 
+            linewidth: 1.5,
+            transparent: true,
+            opacity: 0.85
+        });
         const igesLines = new THREE.LineSegments(igesGeo, igesMat);
-        igesLines.position.set(0, 0.5, 0);
         pcbGroup.add(igesLines);
 
         const badge = document.getElementById('cadStatusBadge');
-        if (badge) badge.innerText = `SolidWorks IGES (${Math.round(cadPoints.length / 2)} CAD Lines)`;
+        if (badge) badge.innerText = `SolidWorks IGES (${Math.round(cadPoints.length / 6)} Lines)`;
     }
 }
 
 function toggleAutoRotate() {
     autoRotate = !autoRotate;
+    const btn = document.getElementById('btnAutoRotate');
+    if (btn) {
+        if (autoRotate) {
+            btn.classList.add('text-brand-cyan', 'border-brand-cyan/60');
+            btn.classList.remove('text-slate-300', 'border-slate-700');
+        } else {
+            btn.classList.remove('text-brand-cyan', 'border-brand-cyan/60');
+            btn.classList.add('text-slate-300', 'border-slate-700');
+        }
+    }
 }
 
 function toggleWireframe() {
@@ -435,12 +510,27 @@ function toggleWireframe() {
             }
         });
     }
+    const btn = document.getElementById('btnWireframe');
+    if (btn) {
+        if (isWireframe) {
+            btn.classList.add('text-brand-purple', 'border-brand-purple/60');
+            btn.classList.remove('text-slate-300', 'border-slate-700');
+        } else {
+            btn.classList.remove('text-brand-purple', 'border-brand-purple/60');
+            btn.classList.add('text-slate-300', 'border-slate-700');
+        }
+    }
 }
 
 function reset3dCamera() {
     if (camera && controls) {
         camera.position.set(0, 8, 14);
         controls.reset();
+    }
+    const btn = document.getElementById('btnResetCamera');
+    if (btn) {
+        btn.classList.add('text-emerald-400');
+        setTimeout(() => btn.classList.remove('text-emerald-400'), 500);
     }
 }
 
@@ -465,23 +555,36 @@ function renderProducts() {
         }
     }
 
+    if (filtered.length === 0) {
+        grid.innerHTML = `
+            <div class="col-span-full py-16 text-center text-slate-400 font-mono">
+                <span class="material-symbols-outlined text-4xl text-slate-600 mb-2">inventory_2</span>
+                <p>No components found matching category "${currentFilter}".</p>
+                <button onclick="filterCategory('All')" class="mt-4 px-4 py-2 rounded-xl bg-brand-cyan text-slate-950 font-bold text-xs">View All Products</button>
+            </div>
+        `;
+        return;
+    }
+
     filtered.forEach(p => {
         let finalPrice = p.price;
         if (isStudentDiscountActive) {
             finalPrice = Math.round(p.price * 0.9);
         }
 
+        const isFaved = wishlist.includes(p.id);
+
         const card = document.createElement('div');
         card.className = 'glass-card rounded-2xl p-5 flex flex-col justify-between group border border-slate-800 relative overflow-hidden';
         card.innerHTML = `
-            <div class="relative w-full h-48 bg-slate-900 rounded-xl overflow-hidden mb-4 border border-slate-800/80">
+            <div class="relative w-full h-48 bg-slate-900 rounded-xl overflow-hidden mb-4 border border-slate-800/80 cursor-pointer" onclick="openProductModal('${p.id}')">
                 <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-110 transition duration-700 opacity-90 group-hover:opacity-100"/>
                 <div class="absolute top-2 left-2 flex flex-col gap-1">
                     <span class="px-2 py-0.5 rounded bg-brand-cyan/90 text-slate-950 font-bold font-mono text-[10px]">${p.badge}</span>
                     ${isStudentDiscountActive ? '<span class="px-2 py-0.5 rounded bg-emerald-400 text-slate-950 font-bold font-mono text-[9px]">-10% STU DSK</span>' : ''}
                 </div>
-                <button onclick="toggleWishlist('${p.id}')" class="absolute top-2 right-2 p-1.5 rounded-full bg-slate-950/80 text-slate-300 hover:text-red-400 border border-slate-700 transition">
-                    <span class="material-symbols-outlined text-sm">${wishlist.includes(p.id) ? 'favorite' : 'favorite'}</span>
+                <button onclick="event.stopPropagation(); toggleWishlist('${p.id}')" class="absolute top-2 right-2 p-1.5 rounded-full bg-slate-950/80 ${isFaved ? 'text-red-500 border-red-500/60' : 'text-slate-300 hover:text-red-400 border-slate-700'} border transition" title="${isFaved ? 'Remove from Wishlist' : 'Add to Wishlist'}">
+                    <span class="material-symbols-outlined text-sm" style="${isFaved ? "font-variation-settings: 'FILL' 1;" : ''}">favorite</span>
                 </button>
             </div>
 
@@ -491,7 +594,7 @@ function renderProducts() {
                         <span>${p.category}</span>
                         <span class="text-emerald-400 font-semibold">${p.stock} in stock</span>
                     </div>
-                    <h3 class="font-heading font-bold text-white text-sm line-clamp-2 mt-1 group-hover:text-brand-cyan transition">
+                    <h3 onclick="openProductModal('${p.id}')" class="font-heading font-bold text-white text-sm line-clamp-2 mt-1 group-hover:text-brand-cyan transition cursor-pointer">
                         ${p.name}
                     </h3>
                 </div>
@@ -531,15 +634,26 @@ function applyFilters() {
 // FILTER CATEGORY
 function filterCategory(cat) {
     currentFilter = cat;
-    document.querySelectorAll('.cat-chip').forEach(btn => {
-        btn.classList.remove('bg-brand-cyan', 'text-slate-950', 'border-brand-cyan');
-        btn.classList.add('bg-slate-900/80', 'border-slate-700', 'text-slate-300');
-    });
 
-    if (event && event.target) {
-        event.target.classList.remove('bg-slate-900/80', 'border-slate-700', 'text-slate-300');
-        event.target.classList.add('bg-brand-cyan', 'text-slate-950', 'border-brand-cyan');
-    }
+    // Update all category chip buttons to reflect active state reliably
+    document.querySelectorAll('.cat-chip').forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick') || '';
+        const isMatch = onclickAttr.includes(`'${cat}'`);
+        const isKit = onclickAttr.includes("'Kits'");
+
+        if (isMatch) {
+            btn.classList.remove('bg-slate-900/80', 'border-slate-700', 'text-slate-300', 'text-brand-purple');
+            btn.classList.add('bg-brand-cyan', 'text-slate-950', 'border-brand-cyan', 'active');
+        } else {
+            btn.classList.remove('bg-brand-cyan', 'text-slate-950', 'border-brand-cyan', 'active');
+            btn.classList.add('bg-slate-900/80', 'border-slate-700');
+            if (isKit) {
+                btn.classList.add('text-brand-purple');
+            } else {
+                btn.classList.add('text-slate-300');
+            }
+        }
+    });
 
     renderProducts();
 }
@@ -656,18 +770,19 @@ function closeProductModal() {
 
 function switchModalTab(tabName) {
     document.querySelectorAll('.modal-tab').forEach(b => {
-        b.classList.remove('border-b-2', 'border-brand-cyan', 'text-brand-cyan', 'font-bold');
-        b.classList.add('text-slate-400');
+        const onclickAttr = b.getAttribute('onclick') || '';
+        if (onclickAttr.includes(`'${tabName}'`)) {
+            b.classList.add('border-b-2', 'border-brand-cyan', 'text-brand-cyan', 'font-bold', 'active');
+            b.classList.remove('text-slate-400');
+        } else {
+            b.classList.remove('border-b-2', 'border-brand-cyan', 'text-brand-cyan', 'font-bold', 'active');
+            b.classList.add('text-slate-400');
+        }
     });
-    if (event && event.target) {
-        event.target.classList.add('border-b-2', 'border-brand-cyan', 'text-brand-cyan', 'font-bold');
-        event.target.classList.remove('text-slate-400');
-    }
 
     document.querySelectorAll('.tab-pane').forEach(d => d.classList.add('hidden'));
-    if (tabName === 'pinout') document.getElementById('tabPinout').classList.remove('hidden');
-    if (tabName === 'working') document.getElementById('tabWorking').classList.remove('hidden');
-    if (tabName === 'code') document.getElementById('tabCode').classList.remove('hidden');
+    const targetPane = document.getElementById('tab' + tabName.charAt(0).toUpperCase() + tabName.slice(1));
+    if (targetPane) targetPane.classList.remove('hidden');
 }
 
 // CART LOGIC
@@ -677,7 +792,9 @@ function addToCart(prodId) {
         existing.qty++;
     } else {
         const prod = products.find(p => p.id === prodId);
-        cart.push({ ...prod, qty: 1 });
+        if (prod) {
+            cart.push({ ...prod, qty: 1 });
+        }
     }
     updateCartUI();
     toggleCartDrawer(true);
@@ -691,30 +808,40 @@ function updateCartUI() {
     let subtotal = 0;
     let totalItems = 0;
 
-    cart.forEach(item => {
-        totalItems += item.qty;
-        const unitPrice = isStudentDiscountActive ? Math.round(item.price * 0.9) : item.price;
-        const itemTotal = unitPrice * item.qty;
-        subtotal += itemTotal;
-
-        const row = document.createElement('div');
-        row.className = 'glass-card p-3 rounded-xl flex items-center justify-between border border-slate-800';
-        row.innerHTML = `
-            <div class="flex items-center gap-3">
-                <img src="${item.image}" class="w-12 h-12 rounded-lg object-cover bg-slate-900 border border-slate-800"/>
-                <div>
-                    <div class="text-xs font-bold text-white line-clamp-1">${item.name}</div>
-                    <div class="text-[10px] font-mono text-slate-400">₹${unitPrice} × ${item.qty}</div>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="changeQty('${item.id}', -1)" class="w-6 h-6 rounded bg-slate-800 text-white font-bold text-xs flex items-center justify-center hover:bg-slate-700">-</button>
-                <span class="text-xs font-mono text-white">${item.qty}</span>
-                <button onclick="changeQty('${item.id}', 1)" class="w-6 h-6 rounded bg-slate-800 text-white font-bold text-xs flex items-center justify-center hover:bg-slate-700">+</button>
+    if (cart.length === 0) {
+        list.innerHTML = `
+            <div class="py-12 text-center text-slate-500 font-mono text-xs">
+                <span class="material-symbols-outlined text-3xl mb-2 text-slate-600">production_quantity_limits</span>
+                <p>Your hardware cart is empty.</p>
+                <p class="text-[10px] text-slate-600 mt-1">Browse catalog to add electronic components.</p>
             </div>
         `;
-        list.appendChild(row);
-    });
+    } else {
+        cart.forEach(item => {
+            totalItems += item.qty;
+            const unitPrice = isStudentDiscountActive ? Math.round(item.price * 0.9) : item.price;
+            const itemTotal = unitPrice * item.qty;
+            subtotal += itemTotal;
+
+            const row = document.createElement('div');
+            row.className = 'glass-card p-3 rounded-xl flex items-center justify-between border border-slate-800';
+            row.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <img src="${item.image}" alt="${item.name}" class="w-12 h-12 rounded-lg object-cover bg-slate-900 border border-slate-800"/>
+                    <div>
+                        <div class="text-xs font-bold text-white line-clamp-1">${item.name}</div>
+                        <div class="text-[10px] font-mono text-slate-400">₹${unitPrice.toLocaleString('en-IN')} × ${item.qty}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="changeQty('${item.id}', -1)" class="w-6 h-6 rounded bg-slate-800 text-white font-bold text-xs flex items-center justify-center hover:bg-slate-700 transition" title="Decrease Quantity">-</button>
+                    <span class="text-xs font-mono text-white px-1">${item.qty}</span>
+                    <button onclick="changeQty('${item.id}', 1)" class="w-6 h-6 rounded bg-slate-800 text-white font-bold text-xs flex items-center justify-center hover:bg-slate-700 transition" title="Increase Quantity">+</button>
+                </div>
+            `;
+            list.appendChild(row);
+        });
+    }
 
     const cartBadge = document.getElementById('cartCountBadge');
     if (cartBadge) cartBadge.innerText = totalItems;
@@ -724,7 +851,7 @@ function updateCartUI() {
 
     let studentRebate = 0;
     const discountRow = document.getElementById('studentDiscountRow');
-    if (isStudentDiscountActive) {
+    if (isStudentDiscountActive && subtotal > 0) {
         studentRebate = Math.round(subtotal * 0.1);
         if (discountRow) discountRow.classList.remove('hidden');
         const rebateEl = document.getElementById('cartStudentDiscount');
@@ -757,6 +884,8 @@ function toggleCartDrawer(forceOpen) {
     if (!drawer) return;
     if (forceOpen === true) {
         drawer.classList.remove('hidden');
+    } else if (forceOpen === false) {
+        drawer.classList.add('hidden');
     } else {
         drawer.classList.toggle('hidden');
     }
@@ -767,7 +896,8 @@ function simulateCheckout() {
         alert('Your cart is empty! Please add hardware components first.');
         return;
     }
-    alert('🎉 ORDER PLACED SUCCESSFULLY!\n\nYour Proforma GST Invoice & Order Tracking ID #VOLT-' + Math.floor(100000 + Math.random()*900000) + ' has been dispatched to your email.');
+    const orderId = 'VOLT-' + Math.floor(100000 + Math.random() * 900000);
+    alert('🎉 ORDER PLACED SUCCESSFULLY!\n\nYour Proforma GST Invoice & Order Tracking ID #' + orderId + ' has been dispatched to your email.');
     cart = [];
     updateCartUI();
     toggleCartDrawer(false);
@@ -784,19 +914,20 @@ function handleSearch(query) {
         return;
     }
 
-    const matches = products.filter(p => 
-        p.name.toLowerCase().includes(query.toLowerCase()) || 
-        p.category.toLowerCase().includes(query.toLowerCase()) ||
-        p.description.toLowerCase().includes(query.toLowerCase())
+    const q = query.trim().toLowerCase();
+    const matches = products.filter(p =>
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
     );
 
     if (matches.length === 0) {
         list.innerHTML = '<div class="text-xs text-slate-400 p-2">No matching components found. Try "ESP32", "Servo", or "Kit".</div>';
     } else {
         list.innerHTML = matches.slice(0, 4).map(m => `
-            <div onclick="openProductModal('${m.id}')" class="p-2 hover:bg-slate-800/80 rounded-lg cursor-pointer flex items-center justify-between text-xs">
+            <div onclick="selectSearchResult('${m.id}')" class="p-2 hover:bg-slate-800/80 rounded-lg cursor-pointer flex items-center justify-between text-xs transition">
                 <div class="flex items-center gap-2">
-                    <img src="${m.image}" class="w-8 h-8 rounded object-cover"/>
+                    <img src="${m.image}" alt="${m.name}" class="w-8 h-8 rounded object-cover"/>
                     <div>
                         <div class="font-bold text-white">${m.name}</div>
                         <div class="text-[10px] text-slate-400 font-mono">${m.category}</div>
@@ -808,6 +939,12 @@ function handleSearch(query) {
     }
 
     dropdown.classList.remove('hidden');
+}
+
+function selectSearchResult(prodId) {
+    const dropdown = document.getElementById('searchDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+    openProductModal(prodId);
 }
 
 function clearSearch() {
@@ -831,6 +968,9 @@ function closeBulkModal() {
 function handleBulkSubmit(e) {
     e.preventDefault();
     alert('✅ QUOTATION REQUEST RECEIVED!\n\nOur Institutional Procurement Team will email your official GST Quotations & PO payment instructions within 2 business hours.');
+    if (e.target && e.target.reset) {
+        e.target.reset();
+    }
     closeBulkModal();
 }
 
@@ -848,10 +988,14 @@ function toggleWishlist(prodId) {
 
 function toggleWishlistModal() {
     if (wishlist.length === 0) {
-        alert('Your wishlist is empty! Heart components to save them.');
+        alert('Your wishlist is empty! Click the heart icon on any component to save it for your project.');
         return;
     }
-    alert(`Saved Wishlist Components (${wishlist.length}):\n` + wishlist.map(id => products.find(p => p.id === id).name).join('\n'));
+    const names = wishlist.map(id => {
+        const item = products.find(p => p.id === id);
+        return item ? `• ${item.name} (₹${item.price})` : `• ${id}`;
+    }).join('\n');
+    alert(`❤️ Saved Wishlist Components (${wishlist.length}):\n\n${names}`);
 }
 
 // EDUCATIONAL HUB SIMULATOR CANVAS
@@ -859,13 +1003,15 @@ let eduInterval = null;
 
 function loadEduDemo(type) {
     document.querySelectorAll('.edu-btn').forEach(b => {
-        b.classList.remove('border-brand-cyan');
-        b.classList.add('border-slate-800');
+        const onclickAttr = b.getAttribute('onclick') || '';
+        if (onclickAttr.includes(`'${type}'`)) {
+            b.classList.add('border-brand-cyan', 'active');
+            b.classList.remove('border-slate-800');
+        } else {
+            b.classList.remove('border-brand-cyan', 'active');
+            b.classList.add('border-slate-800');
+        }
     });
-    if (event && event.currentTarget) {
-        event.currentTarget.classList.add('border-brand-cyan');
-        event.currentTarget.classList.remove('border-slate-800');
-    }
 
     const title = document.getElementById('eduTitle');
     const how = document.getElementById('eduHow');
@@ -895,8 +1041,8 @@ function loadEduDemo(type) {
 function drawEduCanvas(type) {
     const cvs = document.getElementById('eduCanvas');
     if (!cvs) return;
-    cvs.width = cvs.clientWidth;
-    cvs.height = cvs.clientHeight;
+    cvs.width = cvs.clientWidth || 500;
+    cvs.height = cvs.clientHeight || 256;
     const ctx = cvs.getContext('2d');
 
     if (eduInterval) {
@@ -904,34 +1050,237 @@ function drawEduCanvas(type) {
     }
 
     let frame = 0;
+
     function animate() {
         ctx.clearRect(0, 0, cvs.width, cvs.height);
-        
-        ctx.strokeStyle = '#00F2FF';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(50, cvs.height/2);
-        ctx.lineTo(cvs.width - 50, cvs.height/2);
-        ctx.stroke();
 
-        ctx.fillStyle = '#00E676';
-        for (let i = 0; i < 10; i++) {
-            let x = (frame * 3 + i * 50) % (cvs.width - 100) + 50;
+        const w = cvs.width;
+        const h = cvs.height;
+        const cy = h / 2;
+
+        if (type === 'resistor') {
+            // Main Conductor Wire
+            ctx.strokeStyle = '#00F2FF';
+            ctx.lineWidth = 3;
             ctx.beginPath();
-            ctx.arc(x, cvs.height/2, 5, 0, Math.PI * 2);
+            ctx.moveTo(30, cy);
+            ctx.lineTo(w * 0.35, cy);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(w * 0.65, cy);
+            ctx.lineTo(w - 30, cy);
+            ctx.stroke();
+
+            // Resistor Body (Zig-zag)
+            ctx.strokeStyle = '#BD00FF';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            const startX = w * 0.35;
+            const endX = w * 0.65;
+            const segs = 6;
+            const step = (endX - startX) / segs;
+            ctx.moveTo(startX, cy);
+            for (let s = 1; s <= segs; s++) {
+                const sx = startX + s * step;
+                const sy = cy + (s % 2 === 1 ? -18 : 18);
+                ctx.lineTo(s === segs ? endX : sx, s === segs ? cy : sy);
+            }
+            ctx.stroke();
+
+            // Electrons traveling along wire
+            ctx.fillStyle = '#00E676';
+            for (let i = 0; i < 14; i++) {
+                let pos = (frame * 2.5 + i * 40) % (w - 60) + 30;
+                let ey = cy;
+                if (pos > startX && pos < endX) {
+                    // Slower inside resistor & oscillating
+                    let ratio = (pos - startX) / (endX - startX);
+                    ey = cy + Math.sin(ratio * Math.PI * 4) * 12;
+                }
+                ctx.beginPath();
+                ctx.arc(pos, ey, 4, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Labels
+            ctx.fillStyle = '#00F2FF';
+            ctx.font = '11px Fira Code';
+            ctx.textAlign = 'left';
+            ctx.fillText('HIGH POTENTIAL (V_IN)', 30, cy - 25);
+            ctx.fillStyle = '#94a3b8';
+            ctx.textAlign = 'right';
+            ctx.fillText('PROTECTED LOAD (I_OUT)', w - 30, cy - 25);
+
+            ctx.fillStyle = '#BD00FF';
+            ctx.textAlign = 'center';
+            ctx.fillText('R = 10kΩ [ENERGY DISSIPATION]', w / 2, cy + 38);
+
+        } else if (type === 'servo') {
+            // PWM Waveform on Left
+            ctx.strokeStyle = '#00F2FF';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const waveY = cy - 20;
+            const pulseWidth = 30 + Math.sin(frame * 0.05) * 20;
+
+            for (let x = 30; x < w * 0.5; x += 60) {
+                ctx.moveTo(x, waveY + 25);
+                ctx.lineTo(x, waveY);
+                ctx.lineTo(x + pulseWidth, waveY);
+                ctx.lineTo(x + pulseWidth, waveY + 25);
+                ctx.lineTo(x + 60, waveY + 25);
+            }
+            ctx.stroke();
+
+            ctx.fillStyle = '#00F2FF';
+            ctx.font = '10px Fira Code';
+            ctx.textAlign = 'left';
+            ctx.fillText(`PWM PULSE: ${(1.0 + (pulseWidth / 50)).toFixed(2)}ms (50Hz)`, 30, waveY - 15);
+
+            // Rotating Servo Arm on Right
+            const servoX = w * 0.75;
+            const servoY = cy;
+            const angle = Math.sin(frame * 0.05) * (Math.PI / 2);
+
+            // Servo base box
+            ctx.fillStyle = '#1e293b';
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 2;
+            ctx.fillRect(servoX - 35, servoY - 35, 70, 70);
+            ctx.strokeRect(servoX - 35, servoY - 35, 70, 70);
+
+            // Pivot center
+            ctx.fillStyle = '#f59e0b';
+            ctx.beginPath();
+            ctx.arc(servoX, servoY, 8, 0, Math.PI * 2);
             ctx.fill();
+
+            // Arm
+            ctx.strokeStyle = '#BD00FF';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(servoX, servoY);
+            ctx.lineTo(servoX + Math.cos(angle - Math.PI / 2) * 45, servoY + Math.sin(angle - Math.PI / 2) * 45);
+            ctx.stroke();
+
+            const deg = Math.round(((Math.sin(frame * 0.05) + 1) / 2) * 180);
+            ctx.fillStyle = '#00E676';
+            ctx.font = '11px Fira Code';
+            ctx.textAlign = 'center';
+            ctx.fillText(`ANGLE: ${deg}°`, servoX, servoY + 55);
+
+        } else if (type === 'transistor') {
+            const tx = w / 2;
+            const ty = cy;
+
+            // Transistor schematic symbol
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 3;
+
+            // Base Lead
+            ctx.beginPath();
+            ctx.moveTo(tx - 60, ty);
+            ctx.lineTo(tx - 20, ty);
+            ctx.stroke();
+
+            // Base vertical bar
+            ctx.strokeStyle = '#00F2FF';
+            ctx.beginPath();
+            ctx.moveTo(tx - 20, ty - 30);
+            ctx.lineTo(tx - 20, ty + 30);
+            ctx.stroke();
+
+            // Collector Lead
+            ctx.strokeStyle = '#BD00FF';
+            ctx.beginPath();
+            ctx.moveTo(tx - 20, ty - 15);
+            ctx.lineTo(tx + 25, ty - 40);
+            ctx.lineTo(tx + 25, ty - 60);
+            ctx.stroke();
+
+            // Emitter Lead with Arrow
+            ctx.strokeStyle = '#00E676';
+            ctx.beginPath();
+            ctx.moveTo(tx - 20, ty + 15);
+            ctx.lineTo(tx + 25, ty + 40);
+            ctx.lineTo(tx + 25, ty + 60);
+            ctx.stroke();
+
+            // Base pulsing current
+            const isBaseHigh = Math.sin(frame * 0.08) > 0;
+            ctx.fillStyle = isBaseHigh ? '#00F2FF' : '#475569';
+            ctx.font = '10px Fira Code';
+            ctx.textAlign = 'left';
+            ctx.fillText(`BASE DRIVE: ${isBaseHigh ? 'HIGH (ON)' : 'LOW (OFF)'}`, 30, 40);
+
+            // Collector-Emitter Current Flow
+            if (isBaseHigh) {
+                ctx.fillStyle = '#00E676';
+                for (let i = 0; i < 6; i++) {
+                    let cyPos = ((frame * 3 + i * 20) % 80) + (ty - 40);
+                    ctx.beginPath();
+                    ctx.arc(tx + 25, cyPos, 3.5, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.fillText('CURRENT FLOWING -> IC ACTIVE', tx + 40, ty);
+            } else {
+                ctx.fillStyle = '#ef4444';
+                ctx.fillText('SWITCH OPEN -> IC BLOCKED', tx + 40, ty);
+            }
+
+        } else if (type === 'esp32') {
+            // Logic Level Oscilloscope Grid
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            for (let y = 30; y < h - 20; y += 30) {
+                ctx.beginPath();
+                ctx.moveTo(30, y);
+                ctx.lineTo(w - 30, y);
+                ctx.stroke();
+            }
+
+            // 3.3V Logic Signal Wave
+            ctx.strokeStyle = '#00F2FF';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            const bitWidth = 40;
+            const highY = cy - 35;
+            const lowY = cy + 35;
+
+            let prevLevel = false;
+            for (let x = 30; x < w - 30; x += bitWidth) {
+                let bit = ((Math.floor((x + frame * 3) / bitWidth)) % 3) !== 0;
+                let curY = bit ? highY : lowY;
+                if (x === 30) {
+                    ctx.moveTo(x, curY);
+                } else {
+                    ctx.lineTo(x, curY);
+                }
+                ctx.lineTo(x + bitWidth, curY);
+            }
+            ctx.stroke();
+
+            // Threshold lines & labels
+            ctx.strokeStyle = '#00E676';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(30, highY);
+            ctx.lineTo(w - 30, highY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = '#00E676';
+            ctx.font = '10px Fira Code';
+            ctx.textAlign = 'left';
+            ctx.fillText('+3.3V LOGIC HIGH (SAFE)', 35, highY - 8);
+
+            ctx.fillStyle = '#ef4444';
+            ctx.fillText('+5.0V OVERVOLTAGE DANGER LEVEL', 35, highY - 30);
+
+            ctx.fillStyle = '#64748b';
+            ctx.fillText('0.0V GND LOGIC LOW', 35, lowY + 18);
         }
-
-        ctx.fillStyle = '#12141C';
-        ctx.strokeStyle = '#BD00FF';
-        ctx.lineWidth = 2;
-        ctx.fillRect(cvs.width/2 - 40, cvs.height/2 - 30, 80, 60);
-        ctx.strokeRect(cvs.width/2 - 40, cvs.height/2 - 30, 80, 60);
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = '10px Fira Code';
-        ctx.textAlign = 'center';
-        ctx.fillText(type.toUpperCase(), cvs.width/2, cvs.height/2 + 4);
 
         frame++;
     }

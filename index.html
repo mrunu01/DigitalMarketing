@@ -84,7 +84,7 @@
             <div class="relative flex-1 max-w-lg hidden md:block">
                 <div class="relative flex items-center">
                     <span class="material-symbols-outlined absolute left-3.5 text-slate-400 text-xl pointer-events-none">search</span>
-                    <input type="text" id="searchInput" onkeyup="handleSearch(this.value)" placeholder="Search ESP32, Resistor 10k, Servo, Soldering Iron, DIY Kits..." 
+                    <input type="text" id="searchInput" oninput="handleSearch(this.value)" onkeyup="handleSearch(this.value)" placeholder="Search ESP32, Resistor 10k, Servo, Soldering Iron, DIY Kits..."
                         class="w-full bg-slate-900/80 border border-slate-700/60 rounded-xl pl-11 pr-10 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-cyan focus:ring-1 focus:ring-brand-cyan transition"/>
                     <button onclick="clearSearch()" class="absolute right-3 text-slate-500 hover:text-slate-300">
                         <span class="material-symbols-outlined text-sm">cancel</span>
@@ -237,13 +237,13 @@
 
                     <div class="z-10 bg-slate-950/90 backdrop-blur-md rounded-2xl p-3.5 border border-slate-800 flex items-center justify-between gap-2">
                         <div class="flex items-center gap-2">
-                            <button onclick="toggleAutoRotate()" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-brand-cyan text-xs transition" title="Toggle Auto Rotate">
+                            <button id="btnAutoRotate" onclick="toggleAutoRotate()" class="p-2 rounded-lg bg-slate-900 border border-brand-cyan/60 text-brand-cyan text-xs transition" title="Toggle Auto Rotate">
                                 <span class="material-symbols-outlined text-sm">360</span>
                             </button>
-                            <button onclick="toggleWireframe()" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-brand-purple text-xs transition" title="Toggle Wireframe CAD Mesh">
+                            <button id="btnWireframe" onclick="toggleWireframe()" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-brand-purple text-xs transition" title="Toggle Wireframe CAD Mesh">
                                 <span class="material-symbols-outlined text-sm">grid_on</span>
                             </button>
-                            <button onclick="reset3dCamera()" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 text-xs transition" title="Reset View">
+                            <button id="btnResetCamera" onclick="reset3dCamera()" class="p-2 rounded-lg bg-slate-900 border border-slate-700 text-slate-300 hover:text-emerald-400 text-xs transition" title="Reset View">
                                 <span class="material-symbols-outlined text-sm">restart_alt</span>
                             </button>
                         </div>
@@ -495,10 +495,10 @@
             <div>
                 <h4 class="text-white font-bold mb-3 font-heading uppercase tracking-wider text-[11px]">Academic & Institutional</h4>
                 <ul class="space-y-2">
-                    <li><a href="#" onclick="openBulkModal()" class="hover:text-brand-cyan transition">Bulk PO / GST Quotations</a></li>
-                    <li><a href="#" onclick="toggleStudentDiscount()" class="hover:text-brand-cyan transition">Student Discount Program (-10%)</a></li>
-                    <li><a href="#" class="hover:text-brand-cyan transition">University Lab Partnerships</a></li>
-                    <li><a href="#" class="hover:text-brand-cyan transition">Component Datasheets Index</a></li>
+                    <li><a href="javascript:void(0)" onclick="openBulkModal()" class="hover:text-brand-cyan transition">Bulk PO / GST Quotations</a></li>
+                    <li><a href="javascript:void(0)" onclick="toggleStudentDiscount()" class="hover:text-brand-cyan transition">Student Discount Program (-10%)</a></li>
+                    <li><a href="javascript:void(0)" onclick="openBulkModal()" class="hover:text-brand-cyan transition">University Lab Partnerships</a></li>
+                    <li><a href="#catalog" onclick="filterCategory('All')" class="hover:text-brand-cyan transition">Component Datasheets Index</a></li>
                 </ul>
             </div>
 

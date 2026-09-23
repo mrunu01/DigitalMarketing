@@ -1090,6 +1090,8 @@
         function parseIgesData(text) {
             const lines = text.split('\n');
             const cadPoints = [];
+            const scale = 0.165;
+            const yOffset = 0.22;
 
             // IGES parameter section starts with 'P' lines
             for (let i = 0; i < lines.length; i++) {
@@ -1097,30 +1099,52 @@
                 if (line.length >= 73 && line.substring(72, 73) === 'P') {
                     const parts = line.substring(0, 64).split(',');
                     if (parts[0].trim() === '110') { // Entity 110 = Straight Line
-                        const x1 = parseFloat(parts[1]) * 0.05;
-                        const y1 = parseFloat(parts[2]) * 0.05;
-                        const z1 = parseFloat(parts[3]) * 0.05;
-                        const x2 = parseFloat(parts[4]) * 0.05;
-                        const y2 = parseFloat(parts[5]) * 0.05;
-                        const z2 = parseFloat(parts[6]) * 0.05;
+                        const rawX1 = parseFloat(parts[1]);
+                        const rawY1 = parseFloat(parts[2]);
+                        const rawZ1 = parseFloat(parts[3]);
+                        const rawX2 = parseFloat(parts[4]);
+                        const rawY2 = parseFloat(parts[5]);
+                        const rawZ2 = parseFloat(parts[6]);
 
-                        if (!isNaN(x1) && !isNaN(y1) && !isNaN(z1)) {
-                            cadPoints.push(new THREE.Vector3(x1, y1, z1));
-                            cadPoints.push(new THREE.Vector3(x2 || x1, y2 || y1, z2 || z1));
+                        if (isNaN(rawX1) || isNaN(rawY1) || isNaN(rawZ1) || isNaN(rawX2) || isNaN(rawY2) || isNaN(rawZ2)) {
+                            continue;
                         }
+
+                        const len = Math.hypot(rawX2 - rawX1, rawY2 - rawY1, rawZ2 - rawZ1);
+
+                        // Filter out infinite revolution axes, datum construction lines & unbounded vectors
+                        if (len > 35 || Math.abs(rawY1) > 15 || Math.abs(rawY2) > 15 || 
+                            Math.abs(rawX1) > 32 || Math.abs(rawX2) > 32 || 
+                            Math.abs(rawZ1) > 22 || Math.abs(rawZ2) > 22) {
+                            continue;
+                        }
+
+                        cadPoints.push(
+                            rawX1 * scale,
+                            rawY1 * scale + yOffset,
+                            rawZ1 * scale,
+                            rawX2 * scale,
+                            rawY2 * scale + yOffset,
+                            rawZ2 * scale
+                        );
                     }
                 }
             }
 
             if (cadPoints.length > 0) {
-                const igesGeo = new THREE.BufferGeometry().setFromPoints(cadPoints);
-                const igesMat = new THREE.LineBasicMaterial({ color: 0xBD00FF, linewidth: 1.5 });
+                const igesGeo = new THREE.BufferGeometry();
+                igesGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(cadPoints), 3));
+                const igesMat = new THREE.LineBasicMaterial({ 
+                    color: 0xBD00FF, 
+                    linewidth: 1.5,
+                    transparent: true,
+                    opacity: 0.85
+                });
                 const igesLines = new THREE.LineSegments(igesGeo, igesMat);
-                igesLines.position.set(0, 0.5, 0);
                 pcbGroup.add(igesLines);
 
                 const badge = document.getElementById('cadStatusBadge');
-                if (badge) badge.innerText = `SolidWorks IGES (${Math.round(cadPoints.length / 2)} CAD Lines)`;
+                if (badge) badge.innerText = `SolidWorks IGES (${Math.round(cadPoints.length / 6)} Lines)`;
             }
         }
 
