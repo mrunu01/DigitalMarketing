@@ -207,7 +207,45 @@ graph TD
 
 ---
 
-### 3. Deep-Dive Product Inspection Modal
+### 3. Firebase Authentication & Cloud Persistent Cart System
+VOLT_ARCH incorporates **Firebase Auth (Google 1-Click + Email) & Cloud Firestore** to provide student authentication, cross-device cart persistence, and detailed visitor metrics:
+
+```mermaid
+%%{init: {'theme': 'dark'}}%%
+flowchart LR
+    User([Student / Engineer]) --> Login{Sign In}
+    Login -->|Google 1-Click| GoogleAuth["Firebase Google Auth API"]
+    Login -->|College Email & Pass| EmailAuth["Firebase Email Auth API"]
+    
+    GoogleAuth --> CloudSync["Cloud Firestore & Session Storage"]
+    EmailAuth --> CloudSync
+
+    CloudSync --> RestoreCart["📥 Restore Persistent Cart<br/>(Retains items across logout & devices)"]
+    CloudSync --> Analytics["📊 Record Visitor Data<br/>(Name, College, Time, Device)"]
+    
+    RestoreCart --> ActiveSession["Active Shopping Session"]
+    ActiveSession -->|Modify Cart| AutoSave["💾 Auto-Sync Cart to Firestore"]
+    AutoSave --> CloudSync
+    ActiveSession -->|Logout| SafeLogout["Clear Local State & Preserve Cloud Snapshot"]
+
+    style User fill:#00F2FF,stroke:#00B8C4,stroke-width:2px,color:#08090D
+    style Login fill:#BD00FF,stroke:#9333EA,stroke-width:2px,color:#FFFFFF
+    style GoogleAuth fill:#1E293B,stroke:#00F2FF,stroke-width:1px,color:#E2E8F0
+    style EmailAuth fill:#1E293B,stroke:#00F2FF,stroke-width:1px,color:#E2E8F0
+    style CloudSync fill:#064E3B,stroke:#00E676,stroke-width:2px,color:#FFFFFF
+    style RestoreCart fill:#1E293B,stroke:#00E676,stroke-width:1px,color:#E2E8F0
+    style Analytics fill:#7C2D12,stroke:#FF6B00,stroke-width:2px,color:#FFFFFF
+    style ActiveSession fill:#1E293B,stroke:#00F2FF,stroke-width:1px,color:#E2E8F0
+    style AutoSave fill:#064E3B,stroke:#00E676,stroke-width:1px,color:#FFFFFF
+    style SafeLogout fill:#7C2D12,stroke:#FF6B00,stroke-width:1px,color:#FFFFFF
+```
+
+- **Cloud Persistent Cart**: Users can add items, log out, switch devices (from laptop to mobile), and log back in to find their exact cart preserved with all items, quantities, and student discounts.
+- **Academic Analytics Guarantee**: Every login synchronizes Name, Email, College/University, Device OS, and Login Timestamps directly into the **Firebase Console**, ready to be screenshotted for your college project report.
+
+---
+
+### 4. Deep-Dive Product Inspection Modal
 Clicking any component triggers an inspection modal with 3 dedicated engineering tabs:
 1. **Pinout Configuration**: Interactive badges mapping physical pins (`3V3`, `GND`, `GPIO ADC/DAC`, `I2C SDA/SCL`, `SPI`, `PWM`).
 2. **Internal Working Mechanism**: Physical and semiconductor breakdown (MEMS capacitive deflection, Hall-effect commutation, PID heater tracking).
@@ -239,15 +277,41 @@ Clicking any component triggers an inspection modal with 3 dedicated engineering
 ```plaintext
 MRN/
 ├── index.html            # Primary modular HTML5 entry point with semantic markup
-├── code.html             # Original standalone single-file prototype backup
+├── code.html             # Standalone prototype backup
 ├── css/
 │   └── style.css         # Glassmorphism, neon glow effects, animations, scrollbars
 ├── js/
-│   └── app.js            # Three.js CAD engine, simulation loop, catalog & cart state
+│   └── app.js            # Three.js CAD engine, simulation loop, catalog, persistent cart & auth
 ├── Electrical+PCB.IGS    # SolidWorks 2014 ASCII CAD model (15.3 MB, 186,974 lines)
 ├── screen.png            # High-resolution visual design mockup & reference
 └── README.md             # Complete academic documentation & project report
 ```
+
+---
+
+## 🌐 Free Cloud Hosting Guide (Deploy on Render)
+
+Deploy your live website freely on [Render](https://render.com) in 2 minutes:
+
+1. **Push your code to GitHub**:
+   ```bash
+   git add .
+   git commit -m "Add Firebase Auth, Cloud Persistent Cart, and HD Product Assets"
+   git push origin main
+   ```
+2. **Open Render Dashboard**:
+   - Go to [dashboard.render.com](https://dashboard.render.com) and log in with your GitHub account.
+3. **Create a Static Site**:
+   - Click **"New +"** in the top right → select **"Static Site"**.
+   - Select your GitHub repository: **`mrunu01/DigitalMarketing`**.
+4. **Configure Settings**:
+   - **Name**: `volt-arch` (or `digitalmarketing`)
+   - **Branch**: `main`
+   - **Build Command**: *(leave completely blank)*
+   - **Publish Directory**: `.` *(enter a single dot for root)*
+5. **Click "Create Static Site"**:
+   - Render will build your site and give you a public, secure link (e.g., `https://volt-arch.onrender.com`).
+   - Every time you push changes to GitHub, Render automatically redeploys your website!
 
 ---
 
