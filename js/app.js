@@ -445,6 +445,15 @@ function completeLogin(uid, name, email, photoURL, college) {
     loadCartFromCloud(uid);
     closeAuthModal();
 
+    // Google Analytics 4 Event Tracking
+    if (typeof gtag === 'function') {
+        gtag('event', 'login', {
+            method: 'VOLT_ARCH Portal',
+            user_id: uid,
+            user_college: college
+        });
+    }
+
     alert(`🎉 WELCOME, ${currentUser.displayName.toUpperCase()}!\n\nInstitution: ${college}\nStatus: Cloud Session Active (Persistent Cart Enabled)`);
 }
 
@@ -1022,6 +1031,22 @@ function addToCart(prodId) {
 
     updateCartUI();
     saveCartToCloud(cart);
+
+    // Google Analytics 4 Ecommerce Event
+    const prod = products.find(p => p.id === prodId);
+    if (typeof gtag === 'function' && prod) {
+        gtag('event', 'add_to_cart', {
+            currency: 'INR',
+            value: prod.price,
+            items: [{
+                item_id: prod.id,
+                item_name: prod.name,
+                price: prod.price,
+                quantity: 1
+            }]
+        });
+    }
+
     toggleCartDrawer(true);
 }
 
